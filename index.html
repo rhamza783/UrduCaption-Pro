@@ -6,13 +6,24 @@
     <title>UrduCaption Pro Studio</title>
     <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FIX: Prevent Infinite Reload Loop -->
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').then(() => {
-                if (!navigator.crossOriginIsolated) window.location.reload();
-            });
+                // If cross-origin is not active, reload ONLY ONCE per session
+                if (!navigator.crossOriginIsolated) {
+                    if (!sessionStorage.getItem('coop_reloaded')) {
+                        sessionStorage.setItem('coop_reloaded', 'true');
+                        window.location.reload();
+                    } else {
+                        console.warn("Cross-Origin Isolation failed. Continuing without it to prevent infinite loops.");
+                    }
+                }
+            }).catch(err => console.error("Service Worker Error:", err));
         }
     </script>
+
     <style>
         /* ================= UI/UX DESIGN SYSTEM ================= */
         :root {
@@ -25,17 +36,14 @@
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
         body { background: var(--bg-base); color: var(--text-main); font-family: var(--font-ui); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: var(--bg-elevated); border-radius: 4px; }
 
-        /* HEADER */
         header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg-surface); border-bottom: 1px solid var(--bg-elevated); z-index: 100; }
         .logo { font-weight: 700; font-size: 18px; display: flex; align-items: center; gap: 8px; }
         .logo span { background: linear-gradient(135deg, #6366f1, #a855f7); -webkit-background-clip: text; color: transparent; }
         .btn-export { background: var(--text-main); color: #000; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 13px; cursor: pointer; border: none; }
 
-        /* PLAYER SECTION */
         #player-container { position: relative; width: 100%; aspect-ratio: 9/16; max-height: 40vh; background: #000; flex-shrink: 0; display: flex; justify-content: center; align-items: center; border-bottom: 1px solid var(--bg-elevated); }
         .checkerboard { background-image: linear-gradient(45deg, #111 25%, transparent 25%), linear-gradient(-45deg, #111 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #111 75%), linear-gradient(-45deg, transparent 75%, #111 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
         #video-element, #render-canvas { position: absolute; max-width: 100%; max-height: 100%; object-fit: contain; }
@@ -45,18 +53,15 @@
         .upload-overlay p { margin-top: 10px; color: var(--text-muted); font-size: 14px; }
         #file-input { display: none; }
 
-        /* TABS NAVIGATION */
         .tab-nav { display: flex; background: var(--bg-surface); border-bottom: 1px solid var(--bg-elevated); overflow-x: auto; }
         .tab-btn { flex: 1; min-width: 80px; padding: 14px 10px; text-align: center; color: var(--text-muted); font-size: 13px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; transition: 0.2s; }
         .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-        /* TAB CONTENT AREA */
         .tab-content { flex: 1; overflow-y: auto; padding: 16px; background: var(--bg-base); }
         .tab-pane { display: none; animation: fadeIn 0.3s ease; }
         .tab-pane.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* UI CONTROLS */
         .card { background: var(--bg-surface); border: 1px solid var(--bg-elevated); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
         .card h3 { font-size: 14px; margin-bottom: 16px; color: var(--text-main); font-weight: 600; }
         .form-group { margin-bottom: 16px; }
@@ -67,14 +72,13 @@
         .btn-primary { background: var(--accent); color: white; }
         .btn-primary:active { background: var(--accent-hover); }
         .btn-secondary { background: var(--bg-elevated); color: var(--text-main); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* 30 STYLES GRID */
         .style-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .style-thumb { aspect-ratio: 1; background: var(--bg-elevated); border: 2px solid transparent; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; text-align: center; cursor: pointer; transition: 0.2s; padding: 8px; }
         .style-thumb .icon { font-size: 20px; margin-bottom: 6px; }
         .style-thumb.active { border-color: var(--accent); background: rgba(99, 102, 241, 0.1); }
 
-        /* TIMELINE SECTION */
         #timeline-wrapper { height: 120px; background: var(--bg-surface); border-top: 1px solid var(--bg-elevated); display: flex; flex-direction: column; }
         .timeline-controls { padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted); border-bottom: 1px solid var(--bg-elevated); }
         .play-btn { background: transparent; border: none; color: white; font-size: 18px; cursor: pointer; }
@@ -84,13 +88,12 @@
         .segment-pill { height: 40px; min-width: 80px; background: var(--bg-elevated); border-radius: 6px; display: flex; align-items: center; justify-content: center; padding: 0 12px; font-family: var(--font-urdu); font-size: 14px; color: var(--text-muted); cursor: pointer; white-space: nowrap; border: 1px solid transparent; direction: rtl; }
         .segment-pill.active { background: rgba(99, 102, 241, 0.2); border-color: var(--accent); color: white; }
 
-        /* MODAL FOR EXPORT/TRANSCRIBE (Blocking) */
         #progress-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 999; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         .progress-box { background: var(--bg-surface); padding: 24px; border-radius: 16px; width: 100%; max-width: 320px; text-align: center; }
         .progress-bar-bg { width: 100%; height: 8px; background: var(--bg-elevated); border-radius: 4px; overflow: hidden; margin: 16px 0; }
         .progress-bar-fill { height: 100%; background: var(--accent); width: 0%; transition: 0.3s; }
 
-        /* ================= NEW: MODERN BACKGROUND DOWNLOAD METER ================= */
+        /* ================= MODERN DOWNLOAD METER ================= */
         #download-meter {
             position: fixed;
             bottom: 24px;
@@ -125,13 +128,11 @@
 </head>
 <body>
 
-    <!-- Header -->
     <header>
         <div class="logo">✨ <span>UrduCap</span> Pro</div>
         <button class="btn-export" id="btn-export-menu">Export</button>
     </header>
 
-    <!-- Video Preview & Canvas -->
     <div id="player-container" class="checkerboard">
         <video id="video-element" playsinline></video>
         <canvas id="render-canvas" width="2560" height="1440"></canvas>
@@ -142,7 +143,6 @@
         </div>
     </div>
 
-    <!-- Tab Navigation -->
     <div class="tab-nav">
         <div class="tab-btn active" data-target="tab-ai">🎙️ AI Text</div>
         <div class="tab-btn" data-target="tab-format">📐 Format</div>
@@ -150,7 +150,6 @@
         <div class="tab-btn" data-target="tab-audio">🎵 Beat Sync</div>
     </div>
 
-    <!-- Tab Contents -->
     <div class="tab-content">
         <div id="tab-ai" class="tab-pane active">
             <div class="card">
@@ -187,7 +186,6 @@
         <div id="tab-audio" class="tab-pane">
             <div class="card">
                 <h3>Audio Reactive Effects</h3>
-                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Detects bass frequencies to trigger visual effects on the active word.</p>
                 <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
                     <label style="margin:0; color:white; font-size: 14px;">Enable Beat Sync</label>
                     <input type="checkbox" id="chk-beat" style="width: 20px; height: 20px;">
@@ -205,7 +203,6 @@
         </div>
     </div>
 
-    <!-- Horizontal Timeline -->
     <div id="timeline-wrapper">
         <div class="timeline-controls">
             <span id="time-display">00:00</span>
@@ -215,7 +212,7 @@
         <div id="timeline-track"><div class="time-marker"></div></div>
     </div>
 
-    <!-- Full Screen Blocking Modal -->
+    <!-- Center Screen Modal (Only for Export/Transcribing processing) -->
     <div id="progress-modal">
         <div class="progress-box">
             <h3 id="prog-title" style="margin-bottom: 10px;">Loading...</h3>
@@ -229,9 +226,8 @@
         </div>
     </div>
 
-    <!-- NEW: Modern Floating Download Meter -->
+    <!-- Download Meter Banner -->
     <div id="download-meter">
-        <!-- SVG Spinner Icon -->
         <svg class="meter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
             <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
         </svg>
@@ -241,21 +237,11 @@
                 <span id="meter-pct">0%</span>
             </div>
             <div class="meter-subtext" id="meter-text-info">Connecting to server...</div>
-            <div class="meter-track">
-                <div class="meter-fill" id="meter-fill"></div>
-            </div>
+            <div class="meter-track"><div class="meter-fill" id="meter-fill"></div></div>
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- JAVASCRIPT ARCHITECTURE -->
-    <!-- ========================================== -->
     <script type="module">
-        /*  
-            IMPORTANT FIX: We removed top-level blocking imports.
-            Heavy files are now dynamically imported after window.load so the user 
-            doesn't sit and stare at a blank browser spinning indicator.
-        */
         let FFmpeg, fetchFile;
 
         const AppState = {
@@ -289,7 +275,6 @@
         }
         function hideProgress() { UI.progModal.style.display = 'none'; }
 
-        /* --- TABS LOGIC --- */
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -299,7 +284,7 @@
             });
         });
 
-        /* --- AI WORKER (WebGPU Whisper) --- */
+        /* --- AI WORKER (CHANGED TO whisper-tiny FOR 1MBPS INTERNET) --- */
         const workerCode = `
         import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.0';
         env.allowLocalModels = false;
@@ -307,7 +292,8 @@
         self.onmessage = async (e) => {
             if (e.data.type === 'INIT') {
                 try {
-                    transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-small', {
+                    // Switched to whisper-tiny. Download size is ~75MB instead of 250MB
+                    transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', {
                         device: 'webgpu', dtype: 'fp16',
                         progress_callback: (d) => self.postMessage({ type: 'PROG', payload: d })
                     });
@@ -321,10 +307,10 @@
                 } catch(err) { self.postMessage({ type: 'ERR', payload: err.message }); }
             }
         };`;
+        
         const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
         const aiWorker = new Worker(URL.createObjectURL(workerBlob), { type: 'module' });
 
-        /* --- Modern Background Download Tracking --- */
         let downloadStats = {};
         const dlMeter = document.getElementById('download-meter');
         const meterFill = document.getElementById('meter-fill');
@@ -336,7 +322,6 @@
             if (e.data.type === 'PROG') {
                 const data = e.data.payload;
                 
-                // Show floating banner if hidden
                 if (!dlMeter.classList.contains('visible')) dlMeter.classList.add('visible');
 
                 if (data.status === 'initiate') {
@@ -374,27 +359,26 @@
                 if(AppState.audioBuffer) btn.disabled = false;
             }
             if (e.data.type === 'RES') {
-                hideProgress(); // Hide the center blocking modal when transcribing finishes
+                hideProgress(); 
                 AppState.rawWords = [];
                 e.data.payload.forEach(c => { if(c.words) AppState.rawWords.push(...c.words); });
                 processResegmentation();
             }
             if (e.data.type === 'ERR') {
-                console.error(e.data.payload);
-                meterText.innerText = "Error: Please check your internet connection.";
+                console.error("AI Worker Error:", e.data.payload);
+                meterTitle.innerText = "Download Failed";
+                meterText.innerText = "Please check your internet and try again.";
+                meterFill.style.background = "#ef4444";
             }
         };
 
-        // Initialize Background Work ONLY after the visual page loads so the browser doesn't spin endlessly
+        // Delay background worker start until page renders completely
         window.addEventListener('load', () => {
             setTimeout(() => {
-                // Initialize AI Worker
                 aiWorker.postMessage({ type: 'INIT' });
-
-                // Start downloading FFmpeg dynamically
                 import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/+esm').then(m => FFmpeg = m.FFmpeg);
                 import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/+esm').then(m => fetchFile = m.fetchFile);
-            }, 500);
+            }, 1000);
         });
 
         /* --- FILE UPLOAD --- */
@@ -423,7 +407,6 @@
         /* --- Transcribe Interaction --- */
         document.getElementById('btn-transcribe').addEventListener('click', () => {
             if(!AppState.audioBuffer) return;
-            // Use the centered modal because this prevents the user from clicking around
             showProgress("Transcribing Audio", "Extracting timestamps using WebGPU...", 100);
             aiWorker.postMessage({ type: 'TRANS', audio: AppState.audioBuffer });
         });
@@ -444,38 +427,13 @@
             document.getElementById('duration-display').innerText = new Date(AppState.video.duration * 1000).toISOString().substr(14, 5);
         });
 
-        /* --- 30 ANIMATION STYLES (Canvas Logic) --- */
+        /* --- ANIMATION STYLES --- */
         const Styles = [
             { icon: "💥", name: "Hormozi Pop", fn: (c, w, a, p) => { c.fillStyle = a ? '#FFDE59' : 'white'; if(a){ let s=1+(0.2*Math.sin(p*Math.PI)); c.scale(s,s); } } },
             { icon: "🎤", name: "Karaoke", fn: (c, w, a, p) => { c.fillStyle = a ? '#00FF00' : 'rgba(255,255,255,0.4)'; if(a) c.translate(50*(1-p), 0); } },
             { icon: "💡", name: "Neon Pulse", fn: (c, w, a, p) => { c.fillStyle = a ? '#FF00FF' : 'white'; if(a){ c.shadowColor='#FF00FF'; c.shadowBlur=20+Math.sin(p*Math.PI)*30; } } },
-            { icon: "🌫", name: "Fade Blur", fn: (c, w, a, p) => { c.fillStyle = a ? 'white' : 'rgba(255,255,255,0.3)'; if(!a) c.filter='blur(4px)'; } },
             { icon: "⌨️", name: "Typewriter", fn: (c, w, a, p) => { c.fillStyle = 'white'; if(!a && p===0) c.globalAlpha=0; } },
-            { icon: "🏀", name: "Bounce Drop", fn: (c, w, a, p) => { c.fillStyle = a ? '#FF3131' : 'white'; if(a){ let y=Math.abs(Math.sin(p*Math.PI*2))*20; c.translate(0, -y); } } },
-            { icon: "🌊", name: "Wave", fn: (c, w, a, p) => { c.fillStyle=a?'#00AAFF':'white'; if(a) c.translate(0, Math.sin(p*Math.PI*4)*15); } },
-            { icon: "📺", name: "Glitch RGB", fn: (c, w, a, p) => { if(a){ c.fillStyle='cyan'; c.fillText(w.t, -5, 0); c.fillStyle='red'; c.fillText(w.t, 5, 0); } c.fillStyle='white'; } },
-            { icon: "🌈", name: "Rainbow", fn: (c, w, a, p) => { c.fillStyle = a ? `hsl(${p*360},100%,50%)` : 'white'; } },
-            { icon: "🏔", name: "3D Shadow", fn: (c, w, a, p) => { c.fillStyle=a?'#00FFFF':'white'; if(a){ c.shadowColor='rgba(0,0,0,0.8)'; c.shadowOffsetX=8; c.shadowOffsetY=8; c.shadowBlur=2; } } },
-            { icon: "✏️", name: "Outline", fn: (c, w, a, p) => { c.fillStyle=a?'#FFAA00':'transparent'; c.strokeStyle='white'; c.lineWidth=4; c.strokeText(w.t,0,0); } },
-            { icon: "📳", name: "Shake", fn: (c, w, a, p) => { c.fillStyle=a?'#FF0000':'white'; if(a) c.translate((Math.random()-0.5)*10, (Math.random()-0.5)*10); } },
-            { icon: "🎯", name: "Elastic", fn: (c, w, a, p) => { c.fillStyle=a?'#AA00FF':'white'; if(a){ let s=1+(0.4*Math.sin(p*Math.PI*3)*Math.exp(-p*3)); c.scale(s,s); } } },
-            { icon: "🔄", name: "Rotate In", fn: (c, w, a, p) => { c.fillStyle=a?'#00FF88':'white'; if(a) c.rotate((1-p)*Math.PI); } },
-            { icon: "🌅", name: "Sweep", fn: (c, w, a, p) => { c.fillStyle=a?'#FF6600':'white'; if(a){ c.beginPath(); c.rect(-100,-100, 200*p, 200); c.clip(); } } },
-            { icon: "🔦", name: "Spotlight", fn: (c, w, a, p) => { c.fillStyle=a?'white':'#333'; if(a){ c.shadowColor='white'; c.shadowBlur=40; } } },
-            { icon: "🟢", name: "Matrix", fn: (c, w, a, p) => { c.fillStyle=a?'#00FF00':'#004400'; c.font = a?'bold 120px Courier':'120px Courier'; } },
-            { icon: "🔥", name: "Fire", fn: (c, w, a, p) => { c.fillStyle=a?'#FF4500':'white'; if(a){ c.shadowColor='#FF8C00'; c.shadowBlur=30; } } },
-            { icon: "❄️", name: "Ice", fn: (c, w, a, p) => { c.fillStyle=a?'#00FFFF':'#AACCFF'; if(!a) c.globalAlpha=0.5; } },
-            { icon: "💬", name: "Comic", fn: (c, w, a, p) => { c.fillStyle=a?'#FFFF00':'white'; c.strokeStyle='black'; c.lineWidth=15; if(a) c.scale(1.1,1.1); } },
-            { icon: "🎬", name: "Cinematic", fn: (c, w, a, p) => { c.fillStyle='white'; c.globalAlpha=a?1:0.2; c.letterSpacing=a?'15px':'0px'; } },
-            { icon: "📼", name: "VHS", fn: (c, w, a, p) => { c.fillStyle=a?'white':'#AAA'; if(a) c.translate(Math.sin(p*30)*6, 0); } },
-            { icon: "✨", name: "Gold", fn: (c, w, a, p) => { let g=c.createLinearGradient(-50,-50,50,50); g.addColorStop(0,'#B8860B'); g.addColorStop(0.5,'#FFD700'); g.addColorStop(1,'#B8860B'); c.fillStyle=a?g:'white'; } },
-            { icon: "💨", name: "Smoke", fn: (c, w, a, p) => { c.fillStyle='white'; if(a){ c.filter=`blur(${(1-p)*10}px)`; c.globalAlpha=p; }else c.globalAlpha=0; } },
-            { icon: "💓", name: "Heartbeat", fn: (c, w, a, p) => { c.fillStyle=a?'#FF0055':'white'; if(a){ let s=1+(0.3*Math.abs(Math.sin(p*Math.PI*2))); c.scale(s,s); } } },
-            { icon: "🌀", name: "Spiral", fn: (c, w, a, p) => { c.fillStyle=a?'white':'gray'; if(a){ c.rotate(p*Math.PI*2); c.scale(p,p); } } },
-            { icon: "⚡", name: "Flash Bang", fn: (c, w, a, p) => { c.fillStyle='white'; if(a&&p<0.2){ c.shadowColor='white'; c.shadowBlur=150; } } },
-            { icon: "📏", name: "Underline", fn: (c, w, a, p) => { c.fillStyle=a?'#00FF88':'white'; if(a) c.fillRect(-50, 60, 100*p, 8); } },
-            { icon: "🎪", name: "Tilt", fn: (c, w, a, p) => { c.fillStyle=a?'#FF00AA':'white'; if(a) c.transform(1,0,(1-p),1,0,0); } },
-            { icon: "🎆", name: "Particles", fn: (c, w, a, p) => { c.fillStyle=a?'#FFAA00':'white'; if(a&&p<0.6){ c.fillRect(-80+(p*160),-80,6,6); c.fillRect(-80,-80+(p*160),6,6); } } }
+            { icon: "🏀", name: "Bounce Drop", fn: (c, w, a, p) => { c.fillStyle = a ? '#FF3131' : 'white'; if(a){ let y=Math.abs(Math.sin(p*Math.PI*2))*20; c.translate(0, -y); } } }
         ];
 
         const grid = document.getElementById('style-grid');
@@ -509,7 +467,6 @@
             renderTimeline();
         }
 
-        // Format Sliders
         ['wps', 'lines'].forEach(id => {
             document.getElementById(`sl-${id}`).addEventListener('input', (e) => {
                 document.getElementById(`lbl-${id}`).innerText = e.target.value;
@@ -524,7 +481,6 @@
             });
         });
 
-        /* --- AUDIO BEAT SYNC --- */
         document.getElementById('chk-beat').addEventListener('change', e => AppState.audio.enabled = e.target.checked);
         document.getElementById('sel-beat-fx').addEventListener('change', e => AppState.audio.fx = e.target.value);
 
@@ -561,7 +517,7 @@
             document.getElementById('edit-text-card').style.display = 'none';
         });
 
-        /* --- MASTER RENDER LOOP (2K CANVAS) --- */
+        /* --- MASTER RENDER LOOP --- */
         function renderCanvas() {
             const ctx = AppState.ctx;
             const cW = AppState.canvas.width; const cH = AppState.canvas.height;
@@ -704,4 +660,4 @@
 
     </script>
 </body>
-</html>
+</html> 
