@@ -7,20 +7,16 @@
     <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- FIX: Prevent Infinite Reload Loop -->
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').then(() => {
-                // If cross-origin is not active, reload ONLY ONCE per session
                 if (!navigator.crossOriginIsolated) {
                     if (!sessionStorage.getItem('coop_reloaded')) {
                         sessionStorage.setItem('coop_reloaded', 'true');
                         window.location.reload();
-                    } else {
-                        console.warn("Cross-Origin Isolation failed. Continuing without it to prevent infinite loops.");
                     }
                 }
-            }).catch(err => console.error("Service Worker Error:", err));
+            }).catch(err => console.error("SW Error:", err));
         }
     </script>
 
@@ -154,7 +150,7 @@
         <div id="tab-ai" class="tab-pane active">
             <div class="card">
                 <h3>Auto Captions (Whisper v3)</h3>
-                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Generate highly accurate Urdu word-level timestamps directly on your device using WebGPU.</p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Generate highly accurate Urdu word-level timestamps directly on your device.</p>
                 <button id="btn-transcribe" class="btn btn-primary" disabled>⏳ Initializing AI...</button>
             </div>
             
@@ -212,7 +208,6 @@
         <div id="timeline-track"><div class="time-marker"></div></div>
     </div>
 
-    <!-- Center Screen Modal (Only for Export/Transcribing processing) -->
     <div id="progress-modal">
         <div class="progress-box">
             <h3 id="prog-title" style="margin-bottom: 10px;">Loading...</h3>
@@ -226,7 +221,6 @@
         </div>
     </div>
 
-    <!-- Download Meter Banner -->
     <div id="download-meter">
         <svg class="meter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
             <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
@@ -284,7 +278,7 @@
             });
         });
 
-        /* --- AI WORKER (CHANGED TO whisper-tiny FOR 1MBPS INTERNET) --- */
+        /* --- SMART FALLBACK AI WORKER --- */
         const workerCode = `
         import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.0';
         env.allowLocalModels = false;
@@ -292,13 +286,26 @@
         self.onmessage = async (e) => {
             if (e.data.type === 'INIT') {
                 try {
-                    // Switched to whisper-tiny. Download size is ~75MB instead of 250MB
+                    // 1. Try WebGPU with standard fp32 formatting
+                    self.postMessage({ type: 'INFO', payload: 'Initializing WebGPU...' });
                     transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', {
-                        device: 'webgpu', dtype: 'fp16',
+                        device: 'webgpu', dtype: 'fp32',
                         progress_callback: (d) => self.postMessage({ type: 'PROG', payload: d })
                     });
                     self.postMessage({ type: 'READY' });
-                } catch(err) { self.postMessage({ type: 'ERR', payload: err.message }); }
+                } catch(err1) { 
+                    // 2. If phone rejects WebGPU, fallback safely to CPU (WASM)
+                    self.postMessage({ type: 'INFO', payload: 'Phone WebGPU unsupported. Falling back to CPU/WASM...' });
+                    try {
+                        transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', {
+                            device: 'wasm', dtype: 'q8', // Quantized for lower memory usage
+                            progress_callback: (d) => self.postMessage({ type: 'PROG', payload: d })
+                        });
+                        self.postMessage({ type: 'READY' });
+                    } catch(err2) {
+                        self.postMessage({ type: 'ERR', payload: err2.message });
+                    }
+                }
             }
             if (e.data.type === 'TRANS') {
                 try {
@@ -319,9 +326,12 @@
         const meterTitle = document.getElementById('meter-title');
 
         aiWorker.onmessage = (e) => {
+            if (e.data.type === 'INFO') {
+                if (!dlMeter.classList.contains('visible')) dlMeter.classList.add('visible');
+                meterText.innerText = e.data.payload;
+            }
             if (e.data.type === 'PROG') {
                 const data = e.data.payload;
-                
                 if (!dlMeter.classList.contains('visible')) dlMeter.classList.add('visible');
 
                 if (data.status === 'initiate') {
@@ -367,12 +377,11 @@
             if (e.data.type === 'ERR') {
                 console.error("AI Worker Error:", e.data.payload);
                 meterTitle.innerText = "Download Failed";
-                meterText.innerText = "Please check your internet and try again.";
+                meterText.innerText = e.data.payload || "Please check your internet and try again.";
                 meterFill.style.background = "#ef4444";
             }
         };
 
-        // Delay background worker start until page renders completely
         window.addEventListener('load', () => {
             setTimeout(() => {
                 aiWorker.postMessage({ type: 'INIT' });
@@ -404,10 +413,9 @@
             AppState.audio.dataArray = new Uint8Array(AppState.audio.analyser.frequencyBinCount);
         });
 
-        /* --- Transcribe Interaction --- */
         document.getElementById('btn-transcribe').addEventListener('click', () => {
             if(!AppState.audioBuffer) return;
-            showProgress("Transcribing Audio", "Extracting timestamps using WebGPU...", 100);
+            showProgress("Transcribing Audio", "Extracting timestamps...", 100);
             aiWorker.postMessage({ type: 'TRANS', audio: AppState.audioBuffer });
         });
 
@@ -660,4 +668,4 @@
 
     </script>
 </body>
-</html> 
+</html>
