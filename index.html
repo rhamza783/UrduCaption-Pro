@@ -368,7 +368,8 @@
         self.onmessage = async (e) => {
             if (e.data.type === 'INIT') {
                 try {
-                    transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-large-v3-turbo', {
+                    // Changed to 'Xenova/whisper-small' to fix the Unauthorized Error
+                    transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-small', {
                         device: 'webgpu', dtype: 'fp16',
                         progress_callback: (d) => self.postMessage({ type: 'PROG', payload: d })
                     });
