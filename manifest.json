@@ -1,0 +1,17 @@
+{
+  "name": "UrduCaption Pro Studio",
+  "short_name": "UrduCap",
+  "description": "Professional AI Urdu Video Captioning Engine",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d0d0d",
+  "theme_color": "#6366f1",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3074/3074768.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
