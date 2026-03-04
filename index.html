@@ -35,9 +35,8 @@
         .logo span { background: linear-gradient(135deg, #6366f1, #a855f7); -webkit-background-clip: text; color: transparent; }
         .btn-export { background: var(--text-main); color: #000; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 13px; cursor: pointer; border: none; }
 
-        /* PLAYER SECTION (Top Half) */
+        /* PLAYER SECTION */
         #player-container { position: relative; width: 100%; aspect-ratio: 9/16; max-height: 40vh; background: #000; flex-shrink: 0; display: flex; justify-content: center; align-items: center; border-bottom: 1px solid var(--bg-elevated); }
-        /* Checkerboard background to see text clearly */
         .checkerboard { background-image: linear-gradient(45deg, #111 25%, transparent 25%), linear-gradient(-45deg, #111 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #111 75%), linear-gradient(-45deg, transparent 75%, #111 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
         #video-element, #render-canvas { position: absolute; max-width: 100%; max-height: 100%; object-fit: contain; }
         #render-canvas { z-index: 10; pointer-events: none; }
@@ -60,7 +59,6 @@
         /* UI CONTROLS */
         .card { background: var(--bg-surface); border: 1px solid var(--bg-elevated); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
         .card h3 { font-size: 14px; margin-bottom: 16px; color: var(--text-main); font-weight: 600; }
-        
         .form-group { margin-bottom: 16px; }
         .form-group label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
         input[type=range] { width: 100%; accent-color: var(--accent); }
@@ -76,22 +74,53 @@
         .style-thumb .icon { font-size: 20px; margin-bottom: 6px; }
         .style-thumb.active { border-color: var(--accent); background: rgba(99, 102, 241, 0.1); }
 
-        /* TIMELINE SECTION (Bottom) */
+        /* TIMELINE SECTION */
         #timeline-wrapper { height: 120px; background: var(--bg-surface); border-top: 1px solid var(--bg-elevated); display: flex; flex-direction: column; }
         .timeline-controls { padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted); border-bottom: 1px solid var(--bg-elevated); }
         .play-btn { background: transparent; border: none; color: white; font-size: 18px; cursor: pointer; }
         
         #timeline-track { flex: 1; overflow-x: auto; overflow-y: hidden; display: flex; align-items: center; padding: 0 50vw; gap: 4px; position: relative; scroll-behavior: smooth; }
         .time-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--danger); z-index: 50; }
-        
         .segment-pill { height: 40px; min-width: 80px; background: var(--bg-elevated); border-radius: 6px; display: flex; align-items: center; justify-content: center; padding: 0 12px; font-family: var(--font-urdu); font-size: 14px; color: var(--text-muted); cursor: pointer; white-space: nowrap; border: 1px solid transparent; direction: rtl; }
         .segment-pill.active { background: rgba(99, 102, 241, 0.2); border-color: var(--accent); color: white; }
 
-        /* PROGRESS MODAL */
+        /* MODAL FOR EXPORT/TRANSCRIBE (Blocking) */
         #progress-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 999; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         .progress-box { background: var(--bg-surface); padding: 24px; border-radius: 16px; width: 100%; max-width: 320px; text-align: center; }
         .progress-bar-bg { width: 100%; height: 8px; background: var(--bg-elevated); border-radius: 4px; overflow: hidden; margin: 16px 0; }
         .progress-bar-fill { height: 100%; background: var(--accent); width: 0%; transition: 0.3s; }
+
+        /* ================= NEW: MODERN BACKGROUND DOWNLOAD METER ================= */
+        #download-meter {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(150px);
+            background: rgba(24, 24, 27, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 16px 20px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            z-index: 1000;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(99, 102, 241, 0.2);
+            width: 90%;
+            max-width: 360px;
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+        #download-meter.visible { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .meter-icon { font-size: 24px; color: var(--accent); animation: spin 2s linear infinite; }
+        .meter-info { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .meter-text { font-size: 13px; color: white; display: flex; justify-content: space-between; font-weight: 600; }
+        .meter-subtext { font-size: 11px; color: var(--text-muted); }
+        .meter-track { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+        .meter-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); width: 0%; border-radius: 4px; transition: width 0.3s ease; box-shadow: 0 0 10px rgba(99, 102, 241, 0.4); }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -105,9 +134,7 @@
     <!-- Video Preview & Canvas -->
     <div id="player-container" class="checkerboard">
         <video id="video-element" playsinline></video>
-        <!-- Canvas scaled via CSS, actual resolution is 2K -->
         <canvas id="render-canvas" width="2560" height="1440"></canvas>
-        
         <div class="upload-overlay" id="upload-box">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
             <p>Tap to Upload Video</p>
@@ -125,12 +152,11 @@
 
     <!-- Tab Contents -->
     <div class="tab-content">
-        <!-- 1. AI Transcription Tab -->
         <div id="tab-ai" class="tab-pane active">
             <div class="card">
                 <h3>Auto Captions (Whisper v3)</h3>
                 <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Generate highly accurate Urdu word-level timestamps directly on your device using WebGPU.</p>
-                <button id="btn-transcribe" class="btn btn-primary" disabled>Generate Captions</button>
+                <button id="btn-transcribe" class="btn btn-primary" disabled>⏳ Initializing AI...</button>
             </div>
             
             <div class="card" id="edit-text-card" style="display: none;">
@@ -140,18 +166,11 @@
             </div>
         </div>
 
-        <!-- 2. Formatting & Resegmentation -->
         <div id="tab-format" class="tab-pane">
             <div class="card">
                 <h3>Segment Structure</h3>
-                <div class="form-group">
-                    <label>Words per Segment <span id="lbl-wps">5</span></label>
-                    <input type="range" id="sl-wps" min="1" max="10" value="5">
-                </div>
-                <div class="form-group">
-                    <label>Display Lines <span id="lbl-lines">2</span></label>
-                    <input type="range" id="sl-lines" min="1" max="3" value="2">
-                </div>
+                <div class="form-group"><label>Words per Segment <span id="lbl-wps">5</span></label><input type="range" id="sl-wps" min="1" max="10" value="5"></div>
+                <div class="form-group"><label>Display Lines <span id="lbl-lines">2</span></label><input type="range" id="sl-lines" min="1" max="3" value="2"></div>
             </div>
             <div class="card">
                 <h3>Font Scaling</h3>
@@ -161,24 +180,18 @@
             </div>
         </div>
 
-        <!-- 3. Animation Styles Library -->
         <div id="tab-style" class="tab-pane">
-            <div class="style-grid" id="style-grid">
-                <!-- Injected via JS -->
-            </div>
+            <div class="style-grid" id="style-grid"></div>
         </div>
 
-        <!-- 4. Audio Beat Sync -->
         <div id="tab-audio" class="tab-pane">
             <div class="card">
                 <h3>Audio Reactive Effects</h3>
                 <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Detects bass frequencies to trigger visual effects on the active word.</p>
-                
                 <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
                     <label style="margin:0; color:white; font-size: 14px;">Enable Beat Sync</label>
                     <input type="checkbox" id="chk-beat" style="width: 20px; height: 20px;">
                 </div>
-                
                 <div class="form-group" style="margin-top: 16px;">
                     <label>Effect Type</label>
                     <select id="sel-beat-fx" style="width: 100%; padding: 10px; background: var(--bg-base); color: white; border: 1px solid var(--bg-elevated); border-radius: 8px;">
@@ -199,20 +212,16 @@
             <button class="play-btn" id="btn-play">▶</button>
             <span id="duration-display">00:00</span>
         </div>
-        <div id="timeline-track">
-            <div class="time-marker"></div>
-            <!-- Segment Pills injected here -->
-        </div>
+        <div id="timeline-track"><div class="time-marker"></div></div>
     </div>
 
-    <!-- Progress Modal (For AI Download & Export) -->
+    <!-- Full Screen Blocking Modal -->
     <div id="progress-modal">
         <div class="progress-box">
             <h3 id="prog-title" style="margin-bottom: 10px;">Loading...</h3>
             <p id="prog-desc" style="font-size: 12px; color: var(--text-muted);">Please wait</p>
             <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-fill"></div></div>
         </div>
-        <!-- Hidden Export Options shown inside modal -->
         <div id="export-options" style="display:none; margin-top: 15px; width: 100%; max-width: 320px;">
             <button id="btn-exp-webm" class="btn btn-secondary" style="margin-bottom: 10px;">Export Transparent WebM</button>
             <button id="btn-exp-mp4" class="btn btn-primary">Export Full Video (MP4)</button>
@@ -220,15 +229,35 @@
         </div>
     </div>
 
+    <!-- NEW: Modern Floating Download Meter -->
+    <div id="download-meter">
+        <!-- SVG Spinner Icon -->
+        <svg class="meter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+        </svg>
+        <div class="meter-info">
+            <div class="meter-text">
+                <span id="meter-title">Downloading AI Engine...</span>
+                <span id="meter-pct">0%</span>
+            </div>
+            <div class="meter-subtext" id="meter-text-info">Connecting to server...</div>
+            <div class="meter-track">
+                <div class="meter-fill" id="meter-fill"></div>
+            </div>
+        </div>
+    </div>
 
     <!-- ========================================== -->
     <!-- JAVASCRIPT ARCHITECTURE -->
     <!-- ========================================== -->
     <script type="module">
-        import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/+esm';
-        import { fetchFile } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/+esm';
+        /*  
+            IMPORTANT FIX: We removed top-level blocking imports.
+            Heavy files are now dynamically imported after window.load so the user 
+            doesn't sit and stare at a blank browser spinning indicator.
+        */
+        let FFmpeg, fetchFile;
 
-        /* --- STATE MANAGEMENT --- */
         const AppState = {
             video: document.getElementById('video-element'),
             canvas: document.getElementById('render-canvas'),
@@ -239,10 +268,10 @@
             format: { wps: 5, lines: 2, scales: [1.0, 1.0, 1.0] },
             audio: { enabled: false, fx: 'shake', actx: null, analyser: null, dataArray: null, isBeat: false },
             timelineActiveId: -1,
-            isExporting: false
+            isExporting: false,
+            isAiReady: false
         };
 
-        // UI Elements
         const UI = {
             progModal: document.getElementById('progress-modal'),
             progTitle: document.getElementById('prog-title'),
@@ -270,6 +299,104 @@
             });
         });
 
+        /* --- AI WORKER (WebGPU Whisper) --- */
+        const workerCode = `
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.0';
+        env.allowLocalModels = false;
+        let transcriber;
+        self.onmessage = async (e) => {
+            if (e.data.type === 'INIT') {
+                try {
+                    transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-small', {
+                        device: 'webgpu', dtype: 'fp16',
+                        progress_callback: (d) => self.postMessage({ type: 'PROG', payload: d })
+                    });
+                    self.postMessage({ type: 'READY' });
+                } catch(err) { self.postMessage({ type: 'ERR', payload: err.message }); }
+            }
+            if (e.data.type === 'TRANS') {
+                try {
+                    const out = await transcriber(e.data.audio, { language: 'urdu', task: 'transcribe', return_timestamps: 'word', chunk_length_s: 30 });
+                    self.postMessage({ type: 'RES', payload: out.chunks });
+                } catch(err) { self.postMessage({ type: 'ERR', payload: err.message }); }
+            }
+        };`;
+        const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
+        const aiWorker = new Worker(URL.createObjectURL(workerBlob), { type: 'module' });
+
+        /* --- Modern Background Download Tracking --- */
+        let downloadStats = {};
+        const dlMeter = document.getElementById('download-meter');
+        const meterFill = document.getElementById('meter-fill');
+        const meterText = document.getElementById('meter-text-info');
+        const meterPct = document.getElementById('meter-pct');
+        const meterTitle = document.getElementById('meter-title');
+
+        aiWorker.onmessage = (e) => {
+            if (e.data.type === 'PROG') {
+                const data = e.data.payload;
+                
+                // Show floating banner if hidden
+                if (!dlMeter.classList.contains('visible')) dlMeter.classList.add('visible');
+
+                if (data.status === 'initiate') {
+                    downloadStats[data.file] = { loaded: 0, total: 1 };
+                } else if (data.status === 'progress') {
+                    downloadStats[data.file] = { loaded: data.loaded, total: data.total };
+                    
+                    let totalLoaded = 0, totalSize = 0;
+                    Object.values(downloadStats).forEach(s => {
+                        totalLoaded += s.loaded; totalSize += s.total;
+                    });
+                    
+                    if (totalSize > 0) {
+                        const pct = Math.floor((totalLoaded / totalSize) * 100);
+                        meterFill.style.width = `${pct}%`;
+                        meterPct.innerText = `${pct}%`;
+                        
+                        const mbLoaded = (totalLoaded / 1024 / 1024).toFixed(1);
+                        const mbTotal = (totalSize / 1024 / 1024).toFixed(1);
+                        meterText.innerText = `${mbLoaded} MB / ${mbTotal} MB`;
+                    }
+                }
+            }
+            if (e.data.type === 'READY') {
+                AppState.isAiReady = true;
+                meterTitle.innerText = "Engine Ready!";
+                meterText.innerText = "AI optimization complete.";
+                meterFill.style.width = `100%`;
+                meterPct.innerText = `100%`;
+                
+                setTimeout(() => dlMeter.classList.remove('visible'), 2500);
+                
+                const btn = document.getElementById('btn-transcribe');
+                btn.innerText = "🎙️ Generate Captions";
+                if(AppState.audioBuffer) btn.disabled = false;
+            }
+            if (e.data.type === 'RES') {
+                hideProgress(); // Hide the center blocking modal when transcribing finishes
+                AppState.rawWords = [];
+                e.data.payload.forEach(c => { if(c.words) AppState.rawWords.push(...c.words); });
+                processResegmentation();
+            }
+            if (e.data.type === 'ERR') {
+                console.error(e.data.payload);
+                meterText.innerText = "Error: Please check your internet connection.";
+            }
+        };
+
+        // Initialize Background Work ONLY after the visual page loads so the browser doesn't spin endlessly
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                // Initialize AI Worker
+                aiWorker.postMessage({ type: 'INIT' });
+
+                // Start downloading FFmpeg dynamically
+                import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/+esm').then(m => FFmpeg = m.FFmpeg);
+                import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/+esm').then(m => fetchFile = m.fetchFile);
+            }, 500);
+        });
+
         /* --- FILE UPLOAD --- */
         document.getElementById('upload-box').addEventListener('click', () => document.getElementById('file-input').click());
         document.getElementById('file-input').addEventListener('change', async (e) => {
@@ -278,21 +405,27 @@
             AppState.videoFile = file;
             AppState.video.src = URL.createObjectURL(file);
             document.getElementById('upload-box').style.display = 'none';
-            document.getElementById('btn-transcribe').disabled = false;
+            if(AppState.isAiReady) document.getElementById('btn-transcribe').disabled = false;
             
-            // Extract Audio Context
             const arrayBuffer = await file.arrayBuffer();
             AppState.audio.actx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
             const decoded = await AppState.audio.actx.decodeAudioData(arrayBuffer);
             AppState.audioBuffer = decoded.getChannelData(0);
 
-            // Audio Analyser Setup
             const src = AppState.audio.actx.createMediaElementSource(AppState.video);
             AppState.audio.analyser = AppState.audio.actx.createAnalyser();
             AppState.audio.analyser.fftSize = 256;
             src.connect(AppState.audio.analyser);
             AppState.audio.analyser.connect(AppState.audio.actx.destination);
             AppState.audio.dataArray = new Uint8Array(AppState.audio.analyser.frequencyBinCount);
+        });
+
+        /* --- Transcribe Interaction --- */
+        document.getElementById('btn-transcribe').addEventListener('click', () => {
+            if(!AppState.audioBuffer) return;
+            // Use the centered modal because this prevents the user from clicking around
+            showProgress("Transcribing Audio", "Extracting timestamps using WebGPU...", 100);
+            aiWorker.postMessage({ type: 'TRANS', audio: AppState.audioBuffer });
         });
 
         /* --- VIDEO PLAYBACK --- */
@@ -303,7 +436,6 @@
         
         AppState.video.addEventListener('timeupdate', () => {
             if(AppState.isExporting) return;
-            // Update Timeline Scroll
             const pct = AppState.video.currentTime / AppState.video.duration;
             const scrollW = UI.track.scrollWidth - UI.track.clientWidth;
             UI.track.scrollLeft = pct * scrollW;
@@ -312,7 +444,7 @@
             document.getElementById('duration-display').innerText = new Date(AppState.video.duration * 1000).toISOString().substr(14, 5);
         });
 
-        /* --- 30 ANIMATION STYLES (Advanced Canvas Math) --- */
+        /* --- 30 ANIMATION STYLES (Canvas Logic) --- */
         const Styles = [
             { icon: "💥", name: "Hormozi Pop", fn: (c, w, a, p) => { c.fillStyle = a ? '#FFDE59' : 'white'; if(a){ let s=1+(0.2*Math.sin(p*Math.PI)); c.scale(s,s); } } },
             { icon: "🎤", name: "Karaoke", fn: (c, w, a, p) => { c.fillStyle = a ? '#00FF00' : 'rgba(255,255,255,0.4)'; if(a) c.translate(50*(1-p), 0); } },
@@ -346,7 +478,6 @@
             { icon: "🎆", name: "Particles", fn: (c, w, a, p) => { c.fillStyle=a?'#FFAA00':'white'; if(a&&p<0.6){ c.fillRect(-80+(p*160),-80,6,6); c.fillRect(-80,-80+(p*160),6,6); } } }
         ];
 
-        // Build Styles Grid
         const grid = document.getElementById('style-grid');
         Styles.forEach((s, i) => {
             let div = document.createElement('div');
@@ -358,62 +489,6 @@
                 AppState.activeStyleIdx = i;
             };
             grid.appendChild(div);
-        });
-
-        /* --- AI WORKER (WebGPU Whisper) --- */
-        const workerCode = `
-        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.0';
-        env.allowLocalModels = false;
-        let transcriber;
-        self.onmessage = async (e) => {
-            if (e.data.type === 'INIT') {
-                try {
-                    // Changed to 'Xenova/whisper-small' to fix the Unauthorized Error
-                    transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-small', {
-                        device: 'webgpu', dtype: 'fp16',
-                        progress_callback: (d) => self.postMessage({ type: 'PROG', payload: d })
-                    });
-                    self.postMessage({ type: 'READY' });
-                } catch(err) { self.postMessage({ type: 'ERR', payload: err.message }); }
-            }
-            if (e.data.type === 'TRANS') {
-                try {
-                    const out = await transcriber(e.data.audio, { language: 'urdu', task: 'transcribe', return_timestamps: 'word', chunk_length_s: 30 });
-                    self.postMessage({ type: 'RES', payload: out.chunks });
-                } catch(err) { self.postMessage({ type: 'ERR', payload: err.message }); }
-            }
-        };`;
-        const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
-        const aiWorker = new Worker(URL.createObjectURL(workerBlob), { type: 'module' });
-
-        aiWorker.onmessage = (e) => {
-            if (e.data.type === 'PROG') {
-                if(e.data.payload.status === 'progress') {
-                    showProgress("Downloading AI Model", `File: ${e.data.payload.file}`, Math.round(e.data.payload.progress));
-                }
-            }
-            if (e.data.type === 'READY') {
-                hideProgress();
-                document.getElementById('btn-transcribe').innerText = "🎙️ Generate Captions";
-            }
-            if (e.data.type === 'RES') {
-                hideProgress();
-                AppState.rawWords = [];
-                e.data.payload.forEach(c => { if(c.words) AppState.rawWords.push(...c.words); });
-                processResegmentation();
-            }
-            if (e.data.type === 'ERR') {
-                hideProgress(); alert("AI Error: " + e.data.payload);
-            }
-        };
-
-        // Init AI Worker
-        aiWorker.postMessage({ type: 'INIT' });
-
-        document.getElementById('btn-transcribe').addEventListener('click', () => {
-            if(!AppState.audioBuffer) return;
-            showProgress("Transcribing Audio", "AI is analyzing audio (WebGPU)...", 100);
-            aiWorker.postMessage({ type: 'TRANS', audio: AppState.audioBuffer });
         });
 
         /* --- RESEGMENTATION ENGINE --- */
@@ -456,7 +531,7 @@
         /* --- TIMELINE RENDERING --- */
         function renderTimeline() {
             UI.track.innerHTML = '<div class="time-marker"></div>';
-            AppState.segments.forEach((seg, index) => {
+            AppState.segments.forEach((seg) => {
                 let pill = document.createElement('div');
                 pill.className = 'segment-pill';
                 pill.innerText = seg.lines.flat().map(w => w.text).join(' ');
@@ -467,7 +542,6 @@
                     AppState.video.currentTime = seg.start;
                     AppState.timelineActiveId = seg.id;
                     
-                    // Show Edit Panel
                     document.getElementById('edit-text-card').style.display = 'block';
                     document.getElementById('edit-segment-text').value = pill.innerText;
                 };
@@ -479,7 +553,6 @@
             const seg = AppState.segments.find(s => s.id === AppState.timelineActiveId);
             if(!seg) return;
             const newText = document.getElementById('edit-segment-text').value.split(' ');
-            // Simple replace logic (advanced requires full word object mapping, kept simple for space)
             let flatWords = seg.lines.flat();
             for(let i=0; i<Math.min(newText.length, flatWords.length); i++){
                 flatWords[i].text = newText[i];
@@ -496,7 +569,6 @@
             
             let time = AppState.video.currentTime;
             
-            // Audio Beat Detection
             AppState.audio.isBeat = false;
             if (AppState.audio.enabled && AppState.audio.analyser) {
                 AppState.audio.analyser.getByteFrequencyData(AppState.audio.dataArray);
@@ -506,7 +578,6 @@
 
             const seg = AppState.segments.find(s => time >= s.start && time <= s.end);
             
-            // Highlight Timeline
             if(seg && !AppState.isExporting) {
                 const pills = document.querySelectorAll('.segment-pill');
                 pills.forEach(p => p.classList.remove('active'));
@@ -516,7 +587,6 @@
 
             if (!seg) return;
 
-            // Global Beat Fx
             ctx.save();
             if(AppState.audio.isBeat) {
                 if(AppState.audio.fx === 'shake') ctx.translate((Math.random()-0.5)*30, (Math.random()-0.5)*30);
@@ -524,7 +594,6 @@
             }
 
             ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.direction = "rtl";
-
             let startY = (cH / 2) - ((seg.lines.length-1) * 150);
 
             seg.lines.forEach((line, l_idx) => {
@@ -533,7 +602,6 @@
                 
                 let lineStr = line.map(w => w.text).join(' ');
                 let totalW = ctx.measureText(lineStr).width;
-                // RTL Shaping: Start drawing from Right to Left
                 let cursorX = (cW / 2) + (totalW / 2); 
 
                 line.forEach(word => {
@@ -547,17 +615,14 @@
                     ctx.save();
                     ctx.translate(xPos, yPos);
 
-                    // Apply Style Math
                     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.filter = 'none'; ctx.globalAlpha = 1;
                     Styles[AppState.activeStyleIdx].fn(ctx, {t: word.text}, isAct, prog);
                     
-                    // Word-Level Beat Fx
                     if(AppState.audio.isBeat && isAct) {
                         if(AppState.audio.fx === 'scale') ctx.scale(1.2,1.2);
                         if(AppState.audio.fx === 'glow') { ctx.shadowColor='white'; ctx.shadowBlur=80; }
                     }
 
-                    // Draw Stroke & Fill
                     ctx.lineWidth = 15; ctx.strokeStyle = "black";
                     ctx.strokeText(word.text, 0, 0); ctx.fillText(word.text, 0, 0);
 
@@ -583,7 +648,6 @@
             UI.expOpts.style.display = 'block';
         });
 
-        // 1. Transparent WebM
         document.getElementById('btn-exp-webm').addEventListener('click', async () => {
             UI.expOpts.style.display = 'none';
             showProgress("Rendering Transparent WebM", "Capturing 2K Canvas frames...", 50);
@@ -603,8 +667,8 @@
             AppState.video.onended = () => recorder.stop();
         });
 
-        // 2. Full MP4 FFmpeg Mux
         document.getElementById('btn-exp-mp4').addEventListener('click', async () => {
+            if (!FFmpeg) return alert("FFmpeg core is still downloading. Please wait a moment.");
             UI.expOpts.style.display = 'none';
             showProgress("Exporting Full Video", "Step 1: Capturing frames...", 20);
             
